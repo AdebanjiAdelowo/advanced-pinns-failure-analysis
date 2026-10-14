@@ -1,0 +1,36 @@
+name: DeepXDE Poisson Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "src/poisson_baseline.py"
+      - "experiments/run_poisson.py"
+      - "pyproject.toml"
+      - ".github/workflows/pinn-smoke.yml"
+
+jobs:
+  poisson:
+    runs-on: ubuntu-latest
+    env:
+      DDE_BACKEND: pytorch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: python -m pip install -e ".[dev,pinn]"
+      - name: Reference tests
+        run: python -m pytest -q
+      - name: PINN training smoke
+        run: |
+          python - <<'PY'
+          import numpy as np
+          from src.poisson_baseline import train_pinn, exact_solution, relative_l2
+          model = train_pinn(iterations=10, seed=42, num_domain=32, num_boundary=8)
+          x = np.linspace(0, 1, 51)[:, None]
+          error = relative_l2(model.predict(x), exact_solution(x))
+          assert np.isfinite(error), f"Nonfinite relative L2: {error}"
+          print("Smoke relative L2 (not a benchmark):", error)
+          PY
