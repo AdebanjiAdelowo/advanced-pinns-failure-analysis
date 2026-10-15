@@ -62,7 +62,7 @@ def build_model(problem, seed=42, nu=0.01, wavenumber=2.0, hard_bc=False,\n     
     return model, exact
 
 
-def train(problem, iterations=10000, seed=42, **kwargs):
+def train(problem, iterations=10000, seed=42, adaptive_points=0,\n          candidate_points=1024, **kwargs):
     model, exact = build_model(problem, seed=seed, **kwargs)
     model.compile("adam", lr=1e-3)
     model.train(iterations=iterations, display_every=max(1, iterations // 10))
