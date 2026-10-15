@@ -5,7 +5,7 @@ Import DeepXDE only after setting DDE_BACKEND=pytorch.
 import numpy as np
 
 
-def build_model(problem, seed=42, nu=0.01, wavenumber=2.0, hard_bc=False):
+def build_model(problem, seed=42, nu=0.01, wavenumber=2.0, hard_bc=False,\n                fourier_frequencies=None):
     import deepxde as dde
     import torch
 
@@ -58,7 +58,7 @@ def build_model(problem, seed=42, nu=0.01, wavenumber=2.0, hard_bc=False):
             net.apply_output_transform(lambda x, y: x * (1-x) * y)
     else:
         raise ValueError("problem must be burgers or helmholtz")
-    model = dde.Model(data, net)
+    if fourier_frequencies is not None:\n        from src.pinn_torch_features import make_fourier_feature_transform\n        frequencies=np.asarray(fourier_frequencies,dtype=float).reshape(-1)\n        if frequencies.size==0 or not np.isfinite(frequencies).all():\n            raise ValueError("Fourier frequencies must be finite and nonempty")\n        transformed_dim=(2 if problem == "burgers" else 1)+2*len(frequencies)\n        net=dde.nn.FNN([transformed_dim,64,64,64,1], "tanh", "Glorot normal")\n        net.apply_feature_transform(make_fourier_feature_transform(\n            frequencies, input_dim=2 if problem == "burgers" else 1))\n        if hard_bc:\n            if problem=="burgers":\n                net.apply_output_transform(lambda x,y: x[:,0:1]*(1-x[:,0:1])*y)\n            else:\n                net.apply_output_transform(lambda x,y: x*(1-x)*y)\n    model = dde.Model(data, net)
     return model, exact
 
 
